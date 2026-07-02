@@ -47,6 +47,14 @@ def main() -> int:
         ).fetchall()
         if top:
             print("  top capital in stock:", ", ".join(f"{p} £{c:,.0f}" for p, c in top))
+        leaks = con.execute(
+            "SELECT product, revenue_gbp, discount_gbp, discount_pct "
+            "FROM main.product_leaks WHERE discount_gbp > 0 LIMIT 5"
+        ).fetchall()
+        if leaks:
+            print("  most-discounted products:")
+            for prod, rev, disc, pct in leaks:
+                print(f"    {prod[:44]:44} £{disc:>8,.2f} off £{rev:>9,.2f} ({pct}%)")
     finally:
         con.close()
     return 0
