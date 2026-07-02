@@ -1,8 +1,21 @@
 # shop-money-loop: where a Shopify store's money is going
 
-The factory money-loop pattern pointed at commerce: dlt loads a store's orders
-and inventory from the Admin GraphQL API into DuckDB, dbt prices the leaks,
-one tree says where the money went.
+One command answers the question Shopify's own reports don't: dlt loads your
+store's orders and inventory from the Admin GraphQL API into a local DuckDB
+warehouse, dbt prices the leaks, and one tree says where the money went.
+
+```
+== where the store's money is going ==
+  capital in stock   £  53,800.26   (176.62% of revenue)
+  discounts          £   1,737.19   (5.70% of revenue)
+  refunds            £   1,593.64   (5.23% of revenue)
+  cancelled orders   £     921.46   (3.03% of revenue)
+  top capital in stock: Product N £9,042, Product J £8,021, Product A £7,369
+```
+
+Everything runs on your machine. Your store data never leaves it: no hosted
+service, no third party, no app to install on the store beyond a read-only
+custom-app token you create and control.
 
 - refunds and discounts by month (P&L leaks)
 - cancelled order value
