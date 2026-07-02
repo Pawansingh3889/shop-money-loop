@@ -1,0 +1,7 @@
+shop_money_loop:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "{{ env_var('MONEY_WAREHOUSE', 'warehouse.duckdb') }}"
+      threads: 1

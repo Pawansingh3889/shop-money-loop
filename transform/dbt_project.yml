@@ -1,0 +1,10 @@
+name: shop_money_loop
+version: "1.0"
+profile: shop_money_loop
+model-paths: ["models"]
+models:
+  shop_money_loop:
+    staging:
+      +materialized: view
+    marts:
+      +materialized: table
