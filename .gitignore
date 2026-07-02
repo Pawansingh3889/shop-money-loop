@@ -4,3 +4,4 @@ transform/target/
 transform/logs/
 transform/.user.yml
 __pycache__/
+.venv/

@@ -13,9 +13,14 @@ one tree says where the money went.
 
 ## Run it
 
+Setup (own venv, fully self-contained):
+
+    py -3.11 -m venv .venv
+    .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+
 Demo mode (synthetic data, no store needed):
 
-    C:\Users\pawan\work\data-loop-demo\.venv\Scripts\python.exe run.py --demo
+    .\.venv\Scripts\python.exe run.py --demo
 
 Real store: copy `.env.example` to `.env`, fill in the store domain and a
 custom-app Admin API token (scopes: read_orders, read_products,
