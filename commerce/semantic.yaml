@@ -1,0 +1,116 @@
+# sql-steward semantic layer for a Shopify store's money marts (shop.db,
+# published by run.py). This file is the whole contract between an agent and
+# the store's numbers: pre-approved metrics over aggregated marts. There is
+# no customer table here at all -- the pipeline never ingests customer PII,
+# so the agent cannot leak what was never collected.
+
+dialect: sqlite
+
+entities:
+  money_summary:
+    table: money_summary
+    primary_key: category
+    description: Where the store's money is going, one row per leak, with revenue for scale.
+    fields:
+      category: {type: text}
+      amount_gbp: {type: numeric}
+      pct_of_revenue: {type: numeric}
+
+  product_leaks:
+    table: product_leaks
+    primary_key: product
+    description: Discounts attributed per product (line-level plus order-level allocations).
+    fields:
+      product: {type: text}
+      orders: {type: int}
+      units: {type: int}
+      revenue_gbp: {type: numeric}
+      discount_gbp: {type: numeric}
+      discount_pct: {type: numeric}
+
+  product_margin:
+    table: product_margin
+    primary_key: product
+    description: Margin per product after discounts and cost of goods.
+    fields:
+      product: {type: text}
+      units: {type: int}
+      revenue_gbp: {type: numeric}
+      cogs_gbp: {type: numeric}
+      margin_gbp: {type: numeric}
+      margin_pct: {type: numeric}
+      discount_gbp: {type: numeric}
+      discount_share_of_potential_margin_pct: {type: numeric, description: How much of the potential margin the discounts consumed.}
+
+  stock_capital:
+    table: stock_capital
+    primary_key: product
+    description: Cash tied up on the shelf, per product.
+    fields:
+      product: {type: text}
+      variant: {type: text}
+      inventory_quantity: {type: int}
+      unit_cost: {type: numeric}
+      capital_gbp: {type: numeric}
+
+policy:
+  block_pii: [PERSON, EMAIL_ADDRESS, PHONE_NUMBER, CREDIT_CARD]
+  max_rows: 500
+
+metrics:
+  shop_leaks:
+    entity: money_summary
+    aggregate: sum
+    field: amount_gbp
+    description: The store's money tree, by leak category.
+    dimensions_allowed: [category]
+    filters_allowed: [category]
+
+  discount_by_product:
+    entity: product_leaks
+    aggregate: sum
+    field: discount_gbp
+    description: Discount given away, per product.
+    dimensions_allowed: [product]
+    filters_allowed: [product]
+
+  margin_by_product:
+    entity: product_margin
+    aggregate: sum
+    field: margin_gbp
+    description: Margin after discounts and cost of goods, per product.
+    dimensions_allowed: [product]
+    filters_allowed: [product]
+
+  margin_hit_by_discounts:
+    entity: product_margin
+    aggregate: avg
+    field: discount_share_of_potential_margin_pct
+    description: How hard discounts hit each product's potential margin, in percent.
+    dimensions_allowed: [product]
+    filters_allowed: [product]
+
+  capital_in_stock:
+    entity: stock_capital
+    aggregate: sum
+    field: capital_gbp
+    description: Cash on the shelf, per product.
+    dimensions_allowed: [product]
+    filters_allowed: [product]
+
+checks:
+  margins_exist:
+    entity: product_margin
+    kind: row_count_min
+    min: 1
+  product_named:
+    entity: product_margin
+    kind: not_null
+    field: product
+  margin_pct_sane:
+    entity: product_margin
+    kind: range
+    field: margin_pct
+    min: -100
+    max: 100
+    severity: warn

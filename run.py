@@ -34,7 +34,24 @@ def main() -> int:
     if r.returncode:
         return r.returncode
 
-    print("== 3/3 where the store's money is going ==")
+    print("== 3/4 publish marts to shop.db (for the governed agent layer) ==")
+    import sqlite3
+    con = duckdb.connect(WAREHOUSE, read_only=True)
+    out = sqlite3.connect(str(HERE / "shop.db"))
+    try:
+        for table in ("money_summary", "product_leaks", "product_margin", "stock_capital"):
+            rows = con.execute(f"SELECT * FROM main.{table}").fetchall()
+            cols = [d[0] for d in con.description]
+            out.execute(f"DROP TABLE IF EXISTS {table}")
+            out.execute(f"CREATE TABLE {table} ({', '.join(cols)})")
+            out.executemany(f"INSERT INTO {table} VALUES ({', '.join('?' * len(cols))})", rows)
+            print(f"  {table}: {len(rows)} rows")
+        out.commit()
+    finally:
+        con.close()
+        out.close()
+
+    print("== 4/4 where the store's money is going ==")
     con = duckdb.connect(WAREHOUSE, read_only=True)
     try:
         for cat, amount, pct in con.execute(
