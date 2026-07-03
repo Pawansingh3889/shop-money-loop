@@ -19,20 +19,27 @@ WAREHOUSE = str(HERE / "warehouse.duckdb")
 
 
 def main() -> int:
+    import time
+    t0 = time.perf_counter()
+    stages = {}
     demo = ["--demo"] if "--demo" in sys.argv else []
     print("== 1/3 load (dlt) ==")
     r = subprocess.run([sys.executable, str(HERE / "ingest" / "pipeline.py"), *demo])
     if r.returncode:
         return r.returncode
+    stages["extract"] = time.perf_counter() - t0
 
     print("== 2/3 model (dbt) ==")
     env = {**os.environ, "DBT_PROFILES_DIR": str(HERE / "transform"), "MONEY_WAREHOUSE": WAREHOUSE}
+    t1 = time.perf_counter()
     r = subprocess.run(
         [sys.executable, "-m", "dbt.cli.main", "run", "--project-dir", str(HERE / "transform")],
         env=env,
     )
     if r.returncode:
         return r.returncode
+    stages["model"] = time.perf_counter() - t1
+    t2 = time.perf_counter()
 
     print("== 3/4 publish marts to shop.db (for the governed agent layer) ==")
     import sqlite3
@@ -74,6 +81,14 @@ def main() -> int:
                 print(f"    {prod[:44]:44} £{disc:>8,.2f} off £{rev:>9,.2f} ({pct}%)")
     finally:
         con.close()
+
+    stages["query_and_report"] = time.perf_counter() - t2
+    total = time.perf_counter() - t0
+    print()
+    print("== run metrics (for the case study) ==")
+    for name, secs in stages.items():
+        print(f"  {name:18} {secs:6.1f}s")
+    print(f"  {'total':18} {total:6.1f}s  (end to end, on this machine, no cloud)")
     return 0
 
 
