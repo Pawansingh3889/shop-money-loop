@@ -1,0 +1,45 @@
+name: Claude review
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
+
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            Review this pull request for shop-money-loop, a local-first
+            pipeline (dlt -> DuckDB -> dbt) that prices a Shopify store's
+            money leaks.
+
+            Verify against the full tree, not just the diff. Pay particular
+            attention to: money arithmetic in the dbt marts (discount and
+            margin math, divide-by-zero guards, cancelled-order filtering),
+            Shopify API field semantics (discountAllocations vs
+            discountedTotalSet, @idempotent usage), rate-limit pacing on any
+            new API loop, and the project's privacy invariant -- customer PII
+            must never be ingested; flag any field addition that would break
+            that.
+
+            Structure the review as: a one-paragraph verdict, then
+            "Should-fix" (bugs, correctness), "Nits" (style, wording), and
+            "Praise" (what is genuinely good). Be concrete: file:line and a
+            suggested change for every should-fix. If the PR is clean, say so
+            plainly and do not invent findings.
